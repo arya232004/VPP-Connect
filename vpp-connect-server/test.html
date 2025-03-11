@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Socket.io Group Chat</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  </head>
+  <body>
+    <h1>Socket.io Group Chat</h1>
+
+    <!-- Create Room Section -->
+    <h3>Create new room:</h3>
+    <input type="text" id="roomName" placeholder="Room name" />
+    <button onclick="createRoom()">Create Room</button>
+    <br /><br />
+
+    <!-- Join Room Section -->
+    <label for="username">Enter your name:</label>
+    <input type="text" id="username" placeholder="Your name" />
+    <button onclick="joinRoom()">Join Room</button>
+
+    <h3>Participants:</h3>
+    <ul id="participants"></ul>
+    <br />
+
+    <!-- Chat Input, File, and Messages -->
+    <input type="text" id="messageInput" placeholder="Type a message..." />
+    <input type="file" id="fileInput" />
+    <button onclick="sendMessage()">Send Message</button>
+
+    <h3>Chat Messages:</h3>
+    <ul id="messages"></ul>
+
+    <script>
+      const socket = io("ws://localhost:5000", { transports: ["websocket"] });
+
+      // Generate or retrieve a unique user ID
+      let userId = localStorage.getItem("userId");
+      if (!userId) {
+        userId = generateUserId();
+        localStorage.setItem("userId", userId);
+      }
+      function generateUserId() {
+        return "user-" + Math.random().toString(36).substr(2, 9);
+      }
+
+      // Function to create a new room in Firebase (no users initially)
+      function createRoom() {
+        const roomName = document.getElementById("roomName").value.trim();
+        if (!roomName) {
+          alert("Please enter a room name!");
+          return;
+        }
+        // Emit createRoom event to server with the roomName
+        socket.emit("createRoom", { roomName });
+      }
+
+      // Listen for roomCreated event from the server
+      socket.on("roomCreated", (data) => {
+        console.log(`Room created: ${data.roomId}`);
+        localStorage.setItem("chatRoom", data.roomId);
+        localStorage.setItem("chatRoomName", data.roomName);
+        updateParticipants(data.participants);
+        alert(`Room "${data.roomName}" created successfully!`);
+      });
+
+      // Function to join a room (client sends roomName, userId, and name)
+      function joinRoom() {
+        const name = document.getElementById("username").value.trim();
+        if (!name) {
+          alert("Please enter your name!");
+          return;
+        }
+        // Use the room name from localStorage, or default to "Default Room"
+        const roomName = localStorage.getItem("chatRoomName") || "Default Room";
+        socket.emit("joinRoom", { roomName, userId, name });
+      }
+
+      // Listen for joinedRoom event from the server
+      socket.on("joinedRoom", (data) => {
+        console.log(`🟢 ${data.name} joined room: ${data.roomId}`);
+        // Store the roomId and roomName returned by the server in localStorage
+        localStorage.setItem("chatRoom", data.roomId);
+        localStorage.setItem("chatRoomName", data.roomName);
+        updateParticipants(data.participants);
+        loadOldMessages(data.messages);
+      });
+
+      // Function to send a message using the stored roomId and optional file
+      function sendMessage() {
+        const message = document.getElementById("messageInput").value.trim();
+        const roomId = localStorage.getItem("chatRoom") || "";
+        if (!roomId) {
+          alert("No room joined yet!");
+          return;
+        }
+        const name =
+          localStorage.getItem("userName") ||
+          document.getElementById("username").value.trim() ||
+          "Unknown";
+        localStorage.setItem("userName", name);
+
+        const fileInput = document.getElementById("fileInput");
+        const file = fileInput.files[0];
+
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function (event) {
+            socket.emit("sendMessage", {
+              roomId,
+              userId,
+              sender: name,
+              message, // text can be empty if it's a file-only message
+              type: "file",
+              fileUrl: null, // we'll send fileBuffer instead
+              fileBuffer: event.target.result.split(",")[1], // remove data URL prefix
+              fileName: file.name,
+              mainFolder: "chat",
+            });
+            document.getElementById("messageInput").value = "";
+            fileInput.value = "";
+          };
+          reader.readAsDataURL(file);
+        } else {
+          socket.emit("sendMessage", {
+            roomId,
+            userId,
+            sender: name,
+            message,
+            type: "text",
+            fileUrl: null,
+          });
+          document.getElementById("messageInput").value = "";
+        }
+      }
+
+      // Listen for updateParticipants event
+      socket.on("updateParticipants", (participants) => {
+        updateParticipants(participants);
+      });
+
+      function updateParticipants(participants) {
+        const participantsList = document.getElementById("participants");
+        participantsList.innerHTML = "";
+        participants.forEach((user) => {
+          const li = document.createElement("li");
+          li.textContent = `${user.name} (${user.userId})`;
+          participantsList.appendChild(li);
+        });
+      }
+
+      function loadOldMessages(messages) {
+        const messageList = document.getElementById("messages");
+        messageList.innerHTML = ""; // Clear previous messages
+        messages.forEach((data) => {
+          const messageItem = document.createElement("li");
+          messageItem.textContent = `${data.sender}: ${data.message}`;
+          messageList.appendChild(messageItem);
+        });
+      }
+
+      socket.on("receiveMessage", (data) => {
+        console.log("📩 New message:", data);
+        const messageList = document.getElementById("messages");
+        const messageItem = document.createElement("li");
+        messageItem.textContent = `${data.sender}: ${data.message}`;
+        messageList.appendChild(messageItem);
+      });
+
+      socket.on("disconnect", (reason) => {
+        console.log("❌ Disconnected:", reason);
+      });
+
+      document.getElementById("username").addEventListener("change", (e) => {
+        localStorage.setItem("userName", e.target.value.trim());
+      });
+    </script>
+  </body>
+</html>

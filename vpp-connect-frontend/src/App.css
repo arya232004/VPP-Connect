@@ -1,0 +1,26 @@
+@import "tailwindcss";
+html body {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: "Neue Montreal Regular", sans-serif;
+}
+
+@theme {
+    --font-neueRegular: "Neue Montreal Regular", "sans-serif";
+    --font-neueBold: "Neue Montreal Bold", "sans-serif";
+    --font-neueMedium: "Neue Montreal Medium", "sans-serif";
+    --color-vpppurple: #966cff;
+    --color-vpporange: #f67f35;
+    --color-vppviolet: #c859dc;
+    --color-vppgreen: #53b689;
+    --color-pastelpurple: #f5f1ff;
+    --color-pastelgreen: #eafbfc;
+    --color-pastelorange: #fff5eb;
+    --color-themeblue: #5d46ac;
+    --color-themelightblue: #d6d1e9;
+    --color-themegray: #f2f5f8;
+    --color-themedarkgray: #e1e4e7;
+}

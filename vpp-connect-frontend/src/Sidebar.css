@@ -1,0 +1,17 @@
+/* In your Tailwind setup, add these styles for the collapsed sidebar and hover behavior */
+.group:hover .group-hover\:w-[250px] {
+    width: 250px !important;  /* When hovering, expand the sidebar to 250px */
+  }
+  
+  .group .group-hover\:w-[60px] {
+    width: 60px;  /* Default collapsed state */
+  }
+  
+  .group .group-hover\:opacity-100 {
+    opacity: 100% !important;  /* Make text visible when hovering */
+  }
+  
+  .group .group-hover\:pl-4 {
+    padding-left: 1rem !important; /* Adjust padding for text visibility */
+  }
+  
